@@ -9,28 +9,82 @@
     
     <style>
         /* 基礎樣式和響應式設計 */
-        body { margin: 0; overflow: hidden; background-color: #425685; font-family: 'Noto Sans TC', sans-serif; }
+        body { margin: 0; overflow: hidden; background-color: #0f172a; font-family: 'Noto Sans TC', sans-serif; }
         #canvas-container { width: 100vw; height: 100vh; }
         
-        /* 玻璃擬態 (Glassmorphism) UI 面板樣式 */
+        /* 玻璃擬態 (Glassmorphism) UI 面板樣式 - 行動優先 */
         #ui-panel {
-            position: absolute;
-            top: 20px;
-            left: 20px;
+            position: fixed; /* 固定在螢幕上 */
+            left: 0;
+            right: 0;
+            bottom: 0; /* 行動版貼在底部 */
+            width: 100%;
+            max-height: 55vh; /* 限制高度，給 3D 畫面留空間 */
+            
+            /* 基礎玻璃擬態風格 */
             background: rgba(30, 41, 59, 0.9);
             backdrop-filter: blur(12px);
-            padding: 24px;
-            border-radius: 16px;
+            padding: 16px; /* 稍微減少 padding */
+            border-radius: 16px 16px 0 0; /* 只有上方圓角 */
             border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-            width: 380px;
+            box-shadow: 0 -8px 32px rgba(0,0,0,0.5); /* 陰影向上 */
             z-index: 10;
             color: #e2e8f0;
-            transition: transform 0.3s ease;
-            max-height: 90vh;
+            
+            /* 行動版預設隱藏，向上平移 100% 自身高度 */
+            transform: translateY(100%); 
+            transition: transform 0.3s ease-out;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
+        }
+        
+        #ui-panel.open {
+            transform: translateY(0); /* 打開時顯示 */
+        }
+
+        /* 桌面版覆蓋樣式 (Tablet and larger) */
+        @media (min-width: 768px) {
+            #ui-panel {
+                position: absolute; /* 桌面使用 absolute */
+                top: 20px;
+                left: 20px;
+                right: unset;
+                bottom: unset;
+                width: 380px;
+                max-height: 90vh;
+                border-radius: 16px; /* 四邊圓角 */
+                transform: translateY(0); /* 桌面永遠顯示 */
+            }
+        }
+
+        /* 行動版切換按鈕 */
+        #mobile-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 20;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #38bdf8;
+            color: #0f172a;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        #mobile-toggle:hover {
+            background: #7dd3fc;
+        }
+
+        /* 桌面版隱藏切換按鈕 */
+        @media (min-width: 768px) {
+            #mobile-toggle {
+                display: none;
+            }
         }
 
         /* 捲軸樣式 */
@@ -57,7 +111,7 @@
             background: #38bdf8;
             border-radius: 50%;
             cursor: pointer;
-            box-shadow: 0 0 10px rgba(27, 126, 169, 0.5);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
             transition: background 0.2s, transform 0.2s;
         }
         input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.1); background: #7dd3fc; }
@@ -96,6 +150,18 @@
     </style>
 </head>
 <body>
+    
+    <!-- 行動版切換按鈕 (只在行動版顯示) -->
+    <div id="mobile-toggle" onclick="togglePanel()">
+        <!-- 開啟圖標 (顯示面板) -->
+        <svg id="toggle-icon-open" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM7 19h10v2H7z"></path>
+        </svg>
+        <!-- 關閉圖標 (隱藏面板) -->
+        <svg id="toggle-icon-close" style="display:none;" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path>
+        </svg>
+    </div>
 
     <div id="ui-panel">
         <h2 class="text-xl font-bold mb-5 text-white flex items-center justify-between">
@@ -153,7 +219,8 @@
         <!-- 圖例說明 -->
         <div class="mt-4 pt-4 border-t border-slate-700">
             <div class="legend-row"><div class="color-dot" style="background: #0ea5e9; box-shadow: 0 0 5px #0ea5e9;"></div>圓錐 (沙漏形)</div>
-            <div class="legend-row"><div class="color-dot" style="background: #fbbf24; box-shadow: 0 0 5px #fbbf24;"></div>截平面 (切割刀)</div>
+            <!-- 更新圖例顏色 -->
+            <div class="legend-row"><div class="color-dot" style="background: #34d399; box-shadow: 0 0 5px #34d399;"></div>截平面 (切割刀)</div>
             <div class="legend-row"><div class="color-dot" style="background: #f43f5e; box-shadow: 0 0 8px #f43f5e;"></div>截痕 (交線)</div>
         </div>
     </div>
@@ -231,14 +298,16 @@
             metalness: 0.1
         });
 
+        // *** 平面材質 (翡翠綠) ***
         const planeMat = new THREE.MeshPhongMaterial({
-            color: 0xfbbf24, // 平面顏色 (黃色)
+            color: 0x34d399, // 平面顏色 (翡翠綠)
             transparent: true,
-            opacity: 0.2, // 低透明度
+            opacity: 0.3, // 提高不透明度
             side: THREE.DoubleSide,
             depthWrite: false,
             shininess: 90
         });
+        // *************************
 
         // --- 物件群組 (Groups) ---
         const coneGroup = new THREE.Group(); // 圓錐群組 (包含上下兩圓錐)
@@ -283,10 +352,11 @@
         const planeGeom = new THREE.PlaneGeometry(20, 20); // 建立平面幾何
         planeGeom.rotateX(-Math.PI / 2); // 旋轉使其垂直於 Y-Z 平面
         const cuttingPlane = new THREE.Mesh(planeGeom, planeMat);
+        // 更新平面邊框線的顏色以匹配新的平面顏色
         const planeFrame = new THREE.LineSegments(
             new THREE.EdgesGeometry(planeGeom),
-            new THREE.LineBasicMaterial({ color: 0xfcd34d, transparent: true, opacity: 0.6 })
-        ); // 平面邊框線
+            new THREE.LineBasicMaterial({ color: 0x6ee7b7, transparent: true, opacity: 0.6 }) // 邊框線顏色也改成綠色系
+        ); 
         cuttingPlane.add(planeFrame);
         scene.add(cuttingPlane);
 
@@ -315,9 +385,6 @@
         let coneAlphaDeg = 45; // 圓錐半頂角 (Alpha)
         let planeThetaDeg = 0; // 平面與水平面夾角 (Theta)
         let planeOffset = 2.5; // 平面與圓錐頂點的距離 (Offset)
-
-        // 移除了 Gemini AI 功能的 askGemini 函數
-
 
         // --- 預設值設定功能 ---
         window.setPreset = (type) => {
@@ -373,7 +440,7 @@
             updateIntersection();
         }
 
-        // --- 截痕計算核心邏輯 ---
+        // --- 截痕計算核心邏輯 (不變) ---
         function updateIntersection() {
             const alphaRad = THREE.MathUtils.degToRad(coneAlphaDeg); // 圓錐半頂角
             const k = Math.tan(alphaRad); // 圓錐斜率
@@ -438,7 +505,7 @@
             updateLabel(k, alphaRad);
         }
 
-        // --- 根據點陣列繪製 3D 曲線 ---
+        // --- 根據點陣列繪製 3D 曲線 (不變) ---
         function buildCurve(points) {
             let currentSegment = []; // 暫存連續的點
             
@@ -473,7 +540,7 @@
             flush(); // 處理最後一個線段
         }
 
-        // --- 更新截面形狀標籤與描述 ---
+        // --- 更新截面形狀標籤與描述 (不變) ---
         function updateLabel(k, alphaRad) {
             const thetaDeg = planeThetaDeg; // 平面水平傾角 $\theta$
             // 拋物線成立的臨界角度: $\theta_{parabola} = 90^\circ - \alpha$
@@ -526,6 +593,31 @@
             statusBox.style.borderLeftColor = color;
         }
 
+        // --- 行動版優化邏輯 ---
+        const uiPanel = document.getElementById('ui-panel');
+        const iconOpen = document.getElementById('toggle-icon-open');
+        const iconClose = document.getElementById('toggle-icon-close');
+        
+        // 切換面板顯示/隱藏的函數
+        window.togglePanel = () => {
+            // 只有在行動裝置尺寸下才執行切換
+            if (window.innerWidth < 768) {
+                const isOpen = uiPanel.classList.toggle('open');
+                iconOpen.style.display = isOpen ? 'none' : 'block';
+                iconClose.style.display = isOpen ? 'block' : 'none';
+            }
+        };
+
+        // 初始狀態檢查：如果是行動裝置，則隱藏面板
+        if (window.innerWidth < 768) {
+            uiPanel.classList.remove('open');
+            iconOpen.style.display = 'block';
+            iconClose.style.display = 'none';
+        } else {
+            // 桌面版預設開啟
+            uiPanel.classList.add('open'); 
+        }
+
         // --- 事件監聽器 (Listeners) ---
         sliderCone.addEventListener('input', updateSim);
         sliderAngle.addEventListener('input', updateSim);
@@ -536,6 +628,19 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            // 桌面模式下強制開啟並隱藏切換按鈕
+            if (window.innerWidth >= 768) {
+                uiPanel.classList.add('open');
+                // 確保圖標在桌面版保持 '開啟' 狀態
+                iconOpen.style.display = 'block';
+                iconClose.style.display = 'none';
+            } else {
+                // 如果切換到行動模式，檢查當前面板狀態並更新圖標
+                const isOpen = uiPanel.classList.contains('open');
+                iconOpen.style.display = isOpen ? 'none' : 'block';
+                iconClose.style.display = isOpen ? 'block' : 'none';
+            }
         });
 
         // --- 渲染循環 (Animation Loop) ---
