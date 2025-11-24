@@ -247,7 +247,7 @@
 
         // --- 場景設置 (Scene Setup) ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0f172a); // 深藍色背景
+        scene.background = new THREE.Color(0xFFED97); // 深藍色背景
         scene.fog = new THREE.FogExp2(0x0f172a, 0.02); // 指數霧化效果
 
         // 攝影機設置
@@ -280,7 +280,7 @@
 
         // --- 材質 (Materials) ---
         const coneMat = new THREE.MeshPhongMaterial({
-            color: 0x0ea5e9, // 圓錐體顏色 (藍色)
+            color: 0x0000E3, // 圓錐體顏色 (藍色)
             transparent: true,
             opacity: 0.15, // 低透明度，呈現沙漏形狀
             side: THREE.DoubleSide,
