@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圓錐曲線截痕實驗室 (Conic Sections Lab)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* 基礎樣式和響應式設計 */
+        body { margin: 0; overflow: hidden; background-color: #425685; font-family: 'Noto Sans TC', sans-serif; }
+        #canvas-container { width: 100vw; height: 100vh; }
+        
+        /* 玻璃擬態 (Glassmorphism) UI 面板樣式 */
+        #ui-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(30, 41, 59, 0.9);
+            backdrop-filter: blur(12px);
+            padding: 24px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            width: 380px;
+            z-index: 10;
+            color: #e2e8f0;
+            transition: transform 0.3s ease;
+            max-height: 90vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 捲軸樣式 */
+        #ui-panel::-webkit-scrollbar { width: 6px; }
+        #ui-panel::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.3); border-radius: 3px; }
+
+        .slider-group { margin-bottom: 20px; }
+        .slider-header { display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 600; color: #94a3b8; margin-bottom: 8px; }
+        .slider-value { color: #38bdf8; font-family: monospace; font-size: 1rem; }
+        
+        /* 自定義範圍滑桿樣式 */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: #334155;
+            border-radius: 3px;
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #38bdf8;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(27, 126, 169, 0.5);
+            transition: background 0.2s, transform 0.2s;
+        }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.1); background: #7dd3fc; }
+
+        /* 狀態顯示框樣式 */
+        #status-box {
+            margin-top: 10px;
+            padding: 16px;
+            background: rgba(15, 23, 42, 0.6);
+            border-left: 4px solid #38bdf8;
+            border-radius: 0 8px 8px 0;
+        }
+        #shape-name { font-size: 1.5rem; font-weight: 700; color: #ffffff; display: block; margin-bottom: 4px; }
+        #shape-desc { font-size: 0.85rem; color: #94a3b8; line-height: 1.4; }
+
+        /* 快速動作按鈕網格 */
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+        .btn-action {
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            color: #38bdf8;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .btn-action:hover { background: rgba(56, 189, 248, 0.25); border-color: #38bdf8; color: white; }
+        
+        /* 圖例樣式 */
+        .legend-row { display: flex; align-items: center; margin-top: 6px; font-size: 0.85rem; color: #cbd5e1; }
+        .color-dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 10px; }
+        
+        .divider { border-top: 1px solid rgba(148, 163, 184, 0.2); margin: 15px 0; }
+    </style>
+</head>
+<body>
+
+    <div id="ui-panel">
+        <h2 class="text-xl font-bold mb-5 text-white flex items-center justify-between">
+            <span class="flex items-center">
+                <!-- 圓錐曲線圖示 -->
+                <svg class="w-6 h-6 mr-2 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                圓錐曲線實驗室
+            </span>
+        </h2>
+
+        <!-- 預設按鈕區 -->
+        <div class="btn-grid">
+            <button class="btn-action" onclick="setPreset('circle')">圓形 Circle</button>
+            <button class="btn-action" onclick="setPreset('ellipse')">橢圓 Ellipse</button>
+            <button class="btn-action" onclick="setPreset('parabola')">拋物線 Parabola</button>
+            <button class="btn-action" onclick="setPreset('hyperbola')">雙曲線 Hyperbola</button>
+        </div>
+        
+        <div class="divider"></div>
+
+        <!-- 圓錐開口角度滑桿 (Alpha) -->
+        <div class="slider-group">
+            <div class="slider-header">
+                <span>圓錐開口 (Aperture)</span>
+                <span id="cone-val" class="slider-value">45°</span>
+            </div>
+            <input type="range" id="cone-slider" min="15" max="70" step="1" value="45">
+        </div>
+
+        <!-- 平面角度滑桿 (Theta) -->
+        <div class="slider-group">
+            <div class="slider-header">
+                <span>平面角度 (Angle)</span>
+                <span id="angle-val" class="slider-value">0°</span>
+            </div>
+            <!-- 使用 step="1" 確保角度為整數 -->
+            <input type="range" id="angle-slider" min="0" max="90" step="1" value="0">
+        </div>
+
+        <!-- 平面位置滑桿 (Offset) -->
+        <div class="slider-group">
+            <div class="slider-header">
+                <span>平面位置 (Offset)</span>
+                <span id="offset-val" class="slider-value">2.5</span>
+            </div>
+            <input type="range" id="offset-slider" min="-8" max="8" step="0.1" value="2.5">
+        </div>
+
+        <!-- 截面形狀狀態顯示框 -->
+        <div id="status-box">
+            <span id="shape-name">圓形 (Circle)</span>
+            <span id="shape-desc">截面與底面平行，且不通過頂點。</span>
+        </div>
+        
+        <!-- 圖例說明 -->
+        <div class="mt-4 pt-4 border-t border-slate-700">
+            <div class="legend-row"><div class="color-dot" style="background: #0ea5e9; box-shadow: 0 0 5px #0ea5e9;"></div>圓錐 (沙漏形)</div>
+            <div class="legend-row"><div class="color-dot" style="background: #fbbf24; box-shadow: 0 0 5px #fbbf24;"></div>截平面 (切割刀)</div>
+            <div class="legend-row"><div class="color-dot" style="background: #f43f5e; box-shadow: 0 0 8px #f43f5e;"></div>截痕 (交線)</div>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <!-- 導入 THREE.js 模組 -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- 配置與常數 ---
+        const CONE_H = 5; // 單個圓錐的高度
+        // 移除了 AI 相關的 apiKey 和 md 變數
+
+        // --- 場景設置 (Scene Setup) ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0f172a); // 深藍色背景
+        scene.fog = new THREE.FogExp2(0x0f172a, 0.02); // 指數霧化效果
+
+        // 攝影機設置
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(20, 15, 20); // 設定初始視角位置
+
+        // 渲染器設置
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.toneMapping = THREE.ReinhardToneMapping; // 色調映射
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // 軌道控制器 (允許用戶拖曳旋轉視圖)
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true; // 啟用阻尼效果，使旋轉更平滑
+        controls.maxPolarAngle = Math.PI - 0.1; // 限制視角不能轉到正下方
+
+        // --- 燈光 (Lights) ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); // 環境光
+        scene.add(ambientLight);
+        
+        const mainLight = new THREE.DirectionalLight(0xffffff, 1.0); // 主定向光
+        mainLight.position.set(10, 20, 10);
+        scene.add(mainLight);
+
+        const fillLight = new THREE.PointLight(0x38bdf8, 0.5); // 輔助點光源 (藍色調)
+        fillLight.position.set(-10, 0, -10);
+        scene.add(fillLight);
+
+        // --- 材質 (Materials) ---
+        const coneMat = new THREE.MeshPhongMaterial({
+            color: 0x0ea5e9, // 圓錐體顏色 (藍色)
+            transparent: true,
+            opacity: 0.15, // 低透明度，呈現沙漏形狀
+            side: THREE.DoubleSide,
+            shininess: 80,
+            depthWrite: false, // 禁用深度寫入以避免透明渲染問題
+        });
+
+        const edgeMat = new THREE.LineBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.3 }); // 圓錐邊線材質
+        
+        const curveMat = new THREE.MeshStandardMaterial({
+            color: 0xf43f5e, // 截痕顏色 (紅色)
+            emissive: 0xbe123c, // 自發光，讓截痕更醒目
+            emissiveIntensity: 0.8,
+            roughness: 0.1,
+            metalness: 0.1
+        });
+
+        const planeMat = new THREE.MeshPhongMaterial({
+            color: 0xfbbf24, // 平面顏色 (黃色)
+            transparent: true,
+            opacity: 0.2, // 低透明度
+            side: THREE.DoubleSide,
+            depthWrite: false,
+            shininess: 90
+        });
+
+        // --- 物件群組 (Groups) ---
+        const coneGroup = new THREE.Group(); // 圓錐群組 (包含上下兩圓錐)
+        scene.add(coneGroup);
+        
+        const curveGroup = new THREE.Group(); // 截痕曲線群組
+        scene.add(curveGroup);
+
+        // --- 1. 圓錐生成邏輯 ---
+        function updateConeGeometry(angleDeg) {
+            // 清理舊的圓錐體
+            while(coneGroup.children.length > 0){ 
+                const obj = coneGroup.children[0];
+                if (obj.geometry) obj.geometry.dispose(); // 釋放 GPU 記憶體
+                coneGroup.remove(obj); 
+            }
+
+            const alphaRad = THREE.MathUtils.degToRad(angleDeg); // 半頂角 (Alpha) 轉換為弧度
+            const r = CONE_H * Math.tan(alphaRad); // 圓錐底部半徑
+
+            // 上圓錐體
+            const topGeom = new THREE.ConeGeometry(r, CONE_H, 64, 1, true); // 64 段以獲得圓滑表面
+            topGeom.rotateX(Math.PI); // 倒轉 180 度
+            topGeom.translate(0, 2.5, 0); // 向上移動，使頂點在 (0, 0, 0)
+            
+            const topMesh = new THREE.Mesh(topGeom, coneMat);
+            const topEdges = new THREE.LineSegments(new THREE.EdgesGeometry(topGeom, 15), edgeMat);
+            topMesh.add(topEdges);
+            coneGroup.add(topMesh);
+
+            // 下圓錐體
+            const botGeom = new THREE.ConeGeometry(r, CONE_H, 64, 1, true);
+            botGeom.translate(0, -2.5, 0); // 向下移動
+            
+            const botMesh = new THREE.Mesh(botGeom, coneMat);
+            const botEdges = new THREE.LineSegments(new THREE.EdgesGeometry(botGeom, 15), edgeMat);
+            botMesh.add(botEdges);
+            coneGroup.add(botMesh);
+        }
+
+        // --- 2. 切割平面設置 ---
+        const planeGeom = new THREE.PlaneGeometry(20, 20); // 建立平面幾何
+        planeGeom.rotateX(-Math.PI / 2); // 旋轉使其垂直於 Y-Z 平面
+        const cuttingPlane = new THREE.Mesh(planeGeom, planeMat);
+        const planeFrame = new THREE.LineSegments(
+            new THREE.EdgesGeometry(planeGeom),
+            new THREE.LineBasicMaterial({ color: 0xfcd34d, transparent: true, opacity: 0.6 })
+        ); // 平面邊框線
+        cuttingPlane.add(planeFrame);
+        scene.add(cuttingPlane);
+
+        // 圓錐軸線 (Y 軸)
+        const axisLine = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -10, 0), new THREE.Vector3(0, 10, 0)]),
+            new THREE.LineBasicMaterial({ color: 0x475569, opacity: 0.5, transparent: true })
+        );
+        scene.add(axisLine);
+
+
+        // --- UI 元素綁定與狀態初始化 ---
+        const sliderCone = document.getElementById('cone-slider');
+        const sliderAngle = document.getElementById('angle-slider');
+        const sliderOffset = document.getElementById('offset-slider');
+        
+        const textCone = document.getElementById('cone-val');
+        const textAngle = document.getElementById('angle-val');
+        const textOffset = document.getElementById('offset-val');
+        
+        const labelName = document.getElementById('shape-name');
+        const labelDesc = document.getElementById('shape-desc');
+        const statusBox = document.getElementById('status-box');
+
+        // 模擬器狀態變數
+        let coneAlphaDeg = 45; // 圓錐半頂角 (Alpha)
+        let planeThetaDeg = 0; // 平面與水平面夾角 (Theta)
+        let planeOffset = 2.5; // 平面與圓錐頂點的距離 (Offset)
+
+        // 移除了 Gemini AI 功能的 askGemini 函數
+
+
+        // --- 預設值設定功能 ---
+        window.setPreset = (type) => {
+            // 根據類型設定滑桿值
+            if (type === 'circle') {
+                sliderAngle.value = 0;
+                sliderOffset.value = 2.5;
+            } else if (type === 'ellipse') {
+                // 橢圓: theta < 90 - alpha
+                const limit = 90 - coneAlphaDeg;
+                sliderAngle.value = limit * 0.6; 
+                sliderOffset.value = 2.5;
+            } else if (type === 'parabola') {
+                // 拋物線: theta = 90 - alpha
+                const target = 90 - coneAlphaDeg;
+                sliderAngle.value = target;
+                sliderOffset.value = 2.5;
+            } else if (type === 'hyperbola') {
+                // 雙曲線: theta > 90 - alpha
+                const limit = 90 - coneAlphaDeg;
+                sliderAngle.value = Math.min(90, limit + 20);
+                sliderOffset.value = 1.0; // 靠近頂點以確保截到兩側
+            }
+            updateSim(); // 更新模擬
+        };
+
+        // --- 主模擬器更新函數 ---
+        function updateSim(source) {
+            // 從 UI 讀取當前狀態值
+            coneAlphaDeg = parseFloat(sliderCone.value);
+            planeThetaDeg = parseFloat(sliderAngle.value);
+            planeOffset = parseFloat(sliderOffset.value);
+
+            // 更新 UI 顯示文字
+            textCone.innerText = coneAlphaDeg + "°";
+            textAngle.innerText = Math.round(planeThetaDeg) + "°"; // 顯示四捨五入的整數
+            textOffset.innerText = planeOffset.toFixed(1);
+
+            // 1. 更新圓錐體
+            updateConeGeometry(coneAlphaDeg);
+
+            // 2. 更新切割平面位置與角度
+            const thetaRad = THREE.MathUtils.degToRad(planeThetaDeg);
+            cuttingPlane.rotation.set(0, 0, thetaRad); // 繞 Z 軸旋轉平面
+            
+            // 計算平面法線 N = (nx, ny, 0)
+            const nx = -Math.sin(thetaRad);
+            const ny = Math.cos(thetaRad);
+            // 設定平面位置 (Offset * 法線向量)，使 d 為平面到原點的距離
+            cuttingPlane.position.set(nx * planeOffset, ny * planeOffset, 0); 
+
+            // 3. 更新截痕
+            updateIntersection();
+        }
+
+        // --- 截痕計算核心邏輯 ---
+        function updateIntersection() {
+            const alphaRad = THREE.MathUtils.degToRad(coneAlphaDeg); // 圓錐半頂角
+            const k = Math.tan(alphaRad); // 圓錐斜率
+            const thetaRad = THREE.MathUtils.degToRad(planeThetaDeg); // 平面角度
+            const d = planeOffset; // 平面距離原點
+
+            // 清理舊的截痕曲線
+            while(curveGroup.children.length > 0){ 
+                const o = curveGroup.children[0]; 
+                o.geometry.dispose(); 
+                curveGroup.remove(o); 
+            }
+
+            const pointsTop = []; // 儲存上圓錐截點
+            const pointsBot = []; // 儲存下圓錐截點
+            const segments = 360; // 圓周上的取樣點數
+
+            /*
+             * 數學基礎：圓錐方程 (x^2 + z^2) = k^2 * y^2
+             * 平面方程 (在 XZ 平面上旋轉 Theta 角): x*sin(theta) + y*cos(theta) = d
+             * 結合參數方程 r = x^2 + z^2
+             * 最終解出 r/k = (d - x*sin(theta)) / cos(theta)
+             * 極座標表示: x = r * cos(phi), z = r * sin(phi)
+             * 求解 r: r = d / ((cos(theta)/k) - sin(theta)*cos(phi))
+             */
+            for (let i = 0; i <= segments; i++) {
+                const phi = (i / segments) * Math.PI * 2; // 圓錐周上的角度 (0到2pi)
+                const cp = Math.cos(phi);
+                const sp = Math.sin(phi);
+
+                // --- 上圓錐 (y > 0) ---
+                // r = d / ((cos(theta)/k) - sin(theta)*cos(phi))
+                const termTop = (Math.cos(thetaRad) / k) - Math.sin(thetaRad) * cp;
+                
+                // 避免除以零 (代表 r -> 無窮大，可能是雙曲線或接近拋物線的開口方向)
+                if (Math.abs(termTop) > 0.001) {
+                    const r = d / termTop;
+                    // 驗證截點是否在圓錐高度範圍內 (r > 0 且 y = r/k < CONE_H)
+                    if (r >= 0 && r/k <= CONE_H + 0.1) {
+                        // 轉換回笛卡爾坐標 (x, y, z)
+                        pointsTop.push(new THREE.Vector3(r*cp, r/k, r*sp));
+                    } else { pointsTop.push(null); } // 超出圓錐範圍
+                } else { pointsTop.push(null); } // 無窮遠點或不相交
+
+                // --- 下圓錐 (y < 0) ---
+                // r = d / ((-cos(theta)/k) - sin(theta)*cos(phi))
+                const termBot = -Math.sin(thetaRad) * cp - (Math.cos(thetaRad) / k);
+                
+                if (Math.abs(termBot) > 0.001) {
+                    const r = d / termBot;
+                    // 驗證截點是否在圓錐高度範圍內 (r > 0 且 |y| = -r/k < CONE_H)
+                    if (r >= 0 && -r/k >= -CONE_H - 0.1) {
+                        pointsBot.push(new THREE.Vector3(r*cp, -r/k, r*sp));
+                    } else { pointsBot.push(null); }
+                } else { pointsBot.push(null); }
+            }
+
+            // 繪製曲線
+            buildCurve(pointsTop);
+            buildCurve(pointsBot);
+            // 更新狀態標籤
+            updateLabel(k, alphaRad);
+        }
+
+        // --- 根據點陣列繪製 3D 曲線 ---
+        function buildCurve(points) {
+            let currentSegment = []; // 暫存連續的點
+            
+            const flush = () => {
+                if (currentSegment.length < 2) return; // 至少需要 2 個點
+                // 使用 CatmullRomCurve3 建立平滑曲線路徑
+                const path = new THREE.CatmullRomCurve3(currentSegment, false);
+                // 使用 TubeGeometry 給曲線加上厚度，使其可見
+                const geom = new THREE.TubeGeometry(path, currentSegment.length, 0.1, 8, false);
+                const mesh = new THREE.Mesh(geom, curveMat);
+                curveGroup.add(mesh);
+            };
+
+            // 檢查是否為封閉曲線 (如圓形或橢圓)
+            const hasNulls = points.includes(null);
+            if (!hasNulls && points.length > 2) {
+                points.pop(); // 移除重複的最後一個點
+                const path = new THREE.CatmullRomCurve3(points, true); // true 表示閉合
+                const geom = new THREE.TubeGeometry(path, Math.min(points.length, 200), 0.1, 8, true);
+                curveGroup.add(new THREE.Mesh(geom, curveMat));
+                return;
+            }
+
+            // 處理開放曲線 (如拋物線、雙曲線)
+            for (let p of points) {
+                if (p) currentSegment.push(p);
+                else { 
+                    flush(); // 遇到 null，結束當前線段
+                    currentSegment = []; 
+                }
+            }
+            flush(); // 處理最後一個線段
+        }
+
+        // --- 更新截面形狀標籤與描述 ---
+        function updateLabel(k, alphaRad) {
+            const thetaDeg = planeThetaDeg; // 平面水平傾角 $\theta$
+            // 拋物線成立的臨界角度: $\theta_{parabola} = 90^\circ - \alpha$
+            const threshold = 90 - coneAlphaDeg; 
+            const eps = 1.5; // 容忍度 (避免浮點數比較過於嚴苛，造成標籤閃爍)
+
+            let name = "";
+            let desc = "";
+            let color = "#38bdf8";
+            
+            // 顯示四捨五入的整數角度
+            const roundedTheta = Math.round(thetaDeg);
+            const roundedThreshold = Math.round(threshold);
+            
+            // 判斷是否為退化圓錐曲線
+            if (Math.abs(planeOffset) < 0.1) {
+                name = "退化圓錐曲線";
+                desc = "平面通過圓錐頂點 (Degenerate Conic)";
+                color = "#94a3b8";
+            } else {
+                // 1. 圓形 (Circle): $\theta = 0^\circ$ (平面垂直於軸線 $\beta = 90^\circ$)
+                if (thetaDeg === 0) {
+                    name = "圓形 (Circle)";
+                    desc = "平面垂直於圓錐軸線 (β = 90°)";
+                    color = "#22c55e";
+                } 
+                // 2. 橢圓 (Ellipse): $0^\circ < \theta < 90^\circ - \alpha \implies \beta > \alpha$
+                else if (thetaDeg < threshold - eps) {
+                    name = "橢圓 (Ellipse)";
+                    desc = `平面傾角 (${roundedTheta}° < ${roundedThreshold}°)，截面與所有母線相交`;
+                    color = "#a855f7";
+                } 
+                // 3. 拋物線 (Parabola): $\theta \approx 90^\circ - \alpha \implies \beta \approx \alpha$
+                else if (Math.abs(thetaDeg - threshold) <= eps) {
+                    name = "拋物線 (Parabola)";
+                    desc = `平面傾角 (${roundedTheta}° ≈ ${roundedThreshold}°)，平面平行於圓錐母線`;
+                    color = "#f59e0b";
+                } 
+                // 4. 雙曲線 (Hyperbola): $\theta > 90^\circ - \alpha \implies \beta < \alpha$
+                else {
+                    name = "雙曲線 (Hyperbola)";
+                    desc = `平面傾角 (${roundedTheta}° > ${roundedThreshold}°)，截面平行於圓錐軸線 (切過上下兩圓錐)`;
+                    color = "#f43f5e";
+                }
+            }
+            
+            labelName.innerText = name; 
+            labelName.style.color = color;
+            labelDesc.innerText = desc;
+            statusBox.style.borderLeftColor = color;
+        }
+
+        // --- 事件監聽器 (Listeners) ---
+        sliderCone.addEventListener('input', updateSim);
+        sliderAngle.addEventListener('input', updateSim);
+        sliderOffset.addEventListener('input', updateSim);
+        
+        // 處理視窗大小改變
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- 渲染循環 (Animation Loop) ---
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update(); // 更新軌道控制器
+            renderer.render(scene, camera); // 渲染場景
+        }
+        
+        // 啟動模擬器和渲染
+        updateSim();
+        animate();
+
+    </script>
+</body>
+</html>
